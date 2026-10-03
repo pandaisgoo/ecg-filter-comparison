@@ -1,0 +1,24 @@
+# Original input and binary workspaces
+*.mat
+
+# Archives, temporary files, and local comparison runs
+*.zip
+*.asv
+*.m~
+*.bak
+/runs/
+/local_backups/
+/results_check*/
+
+# Temporary TeX output; keep the final PDF
+*.aux
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.toc
+*.out
+/report/*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db

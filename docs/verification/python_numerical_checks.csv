@@ -1,0 +1,11 @@
+PythonEquivalentTest,Value,Limit,Passed
+DFT_vs_FFT,3.4229156766234024e-14,1e-10,True
+Amplitude_even_length,4.440892098500626e-16,1e-10,True
+Amplitude_odd_length,2.220446049250313e-16,1e-10,True
+FIR_filter_vs_convolution,0.0,1e-10,True
+IIR_cascade_vs_expanded,1.4863338607546281e-12,1e-06,True
+FIR_group_delay,2.2256685383581498e-10,1e-07,True
+Response_vs_freqz,2.7940709064382457e-12,1e-06,True
+PSD_Parseval,2.899096834772398e-14,1e-10,True
+IIR_max_pole_radius,0.9500000000000001,0.999999999999,True
+Finite_filter_outputs,0.0,0,True

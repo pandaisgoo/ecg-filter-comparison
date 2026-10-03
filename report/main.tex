@@ -1,0 +1,464 @@
+% !TeX program = xelatex
+% ECG 技術報告。結果取自 2026-10-03 MATLAB 執行紀錄。
+% 本文件調整敘述與編排；不重新計算數值或重繪實驗曲線。
+\documentclass[11pt,a4paper,fontset=none,scheme=plain]{ctexart}
+\usepackage[top=20mm,bottom=20mm,left=22mm,right=22mm,headheight=15pt,headsep=7mm]{geometry}
+\usepackage{fontspec}
+\setCJKmainfont{Noto Serif CJK TC}[AutoFakeSlant=0.2]
+\setCJKsansfont{Noto Sans CJK TC}
+\setCJKmonofont{Noto Sans Mono CJK TC}
+\IfFontExistsTF{TeX Gyre Termes}{\setmainfont{TeX Gyre Termes}}{\setmainfont{TeXGyreTermes}}
+\IfFontExistsTF{TeX Gyre Heros}{\setsansfont{TeX Gyre Heros}}{\setsansfont{TeXGyreHeros}}
+\setmonofont{lmmono10-regular.otf}[Scale=0.92,BoldFont=lmmonolt10-bold.otf]
+\usepackage{amsmath,amssymb,mathtools,unicode-math}
+\setmathfont{latinmodern-math.otf}
+\usepackage{graphicx,booktabs,tabularx,array}
+\usepackage{float,caption,fancyhdr,listings,xcolor}
+\usepackage[hidelinks,unicode]{hyperref}
+\usepackage{bookmark}
+\graphicspath{{figures/}{../results/figures/}{results/figures/}}
+\hypersetup{
+  pdftitle={ECG 訊號分析與 FIR／IIR 濾波器比較},
+  pdfauthor={陳奕安},
+  pdfsubject={頻譜分析、數位濾波器設計、頻帶功率與波形變化評估},
+  pdfkeywords={ECG, MATLAB, FFT, FIR, IIR, digital filtering}}
+\ctexset{
+  section={format=\Large\bfseries,beforeskip=0.5em,afterskip=0.6em},
+  subsection={format=\normalsize\bfseries,beforeskip=0.75em,afterskip=0.3em}
+}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small ECG 訊號分析與數位濾波}
+\fancyhead[R]{\small Technical Report}
+\fancyfoot[L]{\small 陳奕安}
+\fancyfoot[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.3em}
+\linespread{1.10}
+\raggedbottom
+\setlength{\emergencystretch}{2em}
+\setlength{\textfloatsep}{8pt}
+\setlength{\intextsep}{8pt}
+\captionsetup{font=small,labelfont=bf,labelsep=quad,skip=5pt}
+\renewcommand{\figurename}{圖}
+\renewcommand{\tablename}{表}
+\renewcommand{\refname}{參考資料}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\renewcommand{\arraystretch}{1.18}
+\lstset{language=Matlab,basicstyle=\ttfamily\small,
+ keywordstyle=\bfseries,commentstyle=\itshape,
+ frame=single,rulecolor=\color{black!30},framesep=5pt,
+ showstringspaces=false,breaklines=true,columns=fullflexible,
+ keepspaces=true,aboveskip=6pt,belowskip=6pt}
+\newcommand{\Hz}{\,\mathrm{Hz}}
+\newcommand{\s}{\,\mathrm{s}}
+\newcommand{\ms}{\,\mathrm{ms}}
+\newcommand{\dB}{\,\mathrm{dB}}
+\newcommand{\ShowFigure}[4][0.88]{%
+ \begin{figure}[H]\centering
+ \includegraphics[width=#1\linewidth]{#2}
+ \caption{#3}\label{#4}
+ \end{figure}}
+\begin{document}
+
+% ============================== PAGE 1 ==============================
+\begin{center}
+{\small\sffamily ECG Signal Analysis and Digital Filter Comparison}\\[0.8em]
+{\LARGE\bfseries ECG 訊號分析與\\[0.18em]FIR／IIR 濾波器比較}\\[0.5em]
+{\normalsize 頻譜觀察、濾波器設計與量化評估}\\[0.6em]
+{\large 陳奕安}\\[0.3em]
+{\small 實驗紀錄：2026 年 10 月 3 日}
+\end{center}
+\vspace{0.3em}
+
+\section*{摘要}
+本專案使用 MATLAB 建立 ECG 訊號的分析與濾波比較流程，
+目的是了解\textbf{如何抑制指定頻率成分，以及處理過程對訊號波形與延遲造成的影響}。
+我們以一筆取樣率為 $1800\Hz$、長度為 $15000$ 個樣本的紀錄，
+比較 30 點 FIR 移動平均濾波器與針對 $60/120/180\Hz$ 的三段 IIR 陷波器。
+結果顯示，在各目標頻率 $\pm1\Hz$ 的評估頻帶內，
+FIR 的功率降低量為 $46.2567$--$55.8174\dB$，
+IIR 為 $33.1245$--$33.6474\dB$；然而，兩者亦呈現不同的增益與群延遲特性。
+因此，濾波器的選擇不能僅以干擾頻帶降低量判斷，
+還需同時檢查其對其他頻率及局部波形的改變\cite{run2026}。
+
+\section{專案目標與處理流程}
+\subsection{我們想解決什麼問題？}
+ECG（心電圖）是一段隨時間變化的量測訊號。
+面對其中的電源干擾及其諧波，本專案聚焦於 $60$、$120$ 與 $180\Hz$
+三個目標頻率。若只觀察濾波後的曲線是否變平滑，
+仍無法知道哪些成分被抑制，也無法分辨波形改變來自幅度衰減或時間延遲。
+因此，我們同時使用\textbf{時域、頻域與濾波器響應}來檢查處理結果。
+
+本專案的工作包含頻譜計算、候選 R 波與心率估計、兩種濾波器的參數推導與實作，
+以及在共同條件下的量化比較。重點是將數學設計與實際輸出連結，
+說明系統如何改變輸入，而非只展示程式執行後的圖形。
+
+\begin{table}[H]\centering
+\caption{由輸入資料到結果解讀的處理流程}
+\begin{tabularx}{\linewidth}{@{}p{2.4cm}Y@{}}
+\toprule
+階段 & 工作內容與目的 \\ \midrule
+資料分析 & 建立一致的時間軸與頻率軸，比較完整紀錄與短片段的頻譜，並擷取候選峰值。\\
+濾波器設計 & 利用頻率響應零點決定 FIR 長度；以零極點配置建立三段 IIR 陷波器。\\
+同條件評估 & 固定輸入、初始狀態與量測區間，比較頻帶功率、幅度響應、群延遲與波形。\\
+結果解讀 & 區分「目標頻帶抑制」與「波形變化」，說明兩種方法的取捨及適用限制。\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{報告範圍}
+本文呈現單筆 ECG 紀錄上的實作分析，不將結果延伸為跨資料集的性能結論。
+由於沒有乾淨參考訊號或人工峰值標註，本文評估的是指定頻帶與波形的變化，
+不以這些數值宣稱醫療診斷效能或偵測準確率。
+
+% ============================== PAGE 2 ==============================
+\clearpage
+\section{資料與訊號觀察}
+\subsection{輸入資料與時間特徵}
+本實驗從 \texttt{ECG.mat} 讀取訊號與取樣率，時間軸、頻率軸及濾波設計統一使用 $F_s$。
+振幅保留原始數值，不假定電壓校準單位。資料規模見表~\ref{tab:data}，
+完整紀錄與候選峰值見圖~\ref{fig:ecg}~\cite{run2026}。
+
+\begin{table}[H]\centering
+\caption{ECG 資料規模與觀察區間}\label{tab:data}
+\begin{tabularx}{\linewidth}{@{}Y r Y r@{}}
+\toprule
+項目 & 數值 & 項目 & 數值\\ \midrule
+取樣率 $F_s$ & $1800\Hz$ & 樣本數 $N$ & $15000$\\
+最後樣本時間 & $8.33278\s$ & 紀錄長度 $N/F_s$ & $8.33333\s$\\
+短片段範圍 & $[0.8,1.6)\s$ & 短片段樣本數 & $1440$\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\ShowFigure[0.82]{02_ecg_peaks.png}
+{完整 ECG 紀錄與候選 R 波；相鄰候選峰值用於時間間隔分析。}
+{fig:ecg}
+
+\subsection{完整紀錄與短片段的頻譜}
+我們分別對完整紀錄與 $0.8$--$1.6\s$ 片段扣除平均值，
+再依各自的樣本數正規化單邊振幅頻譜。
+完整紀錄反映較長時間範圍的頻率資訊，短片段則呈現局部內容；
+兩者的觀測長度與涵蓋的時間範圍不同。
+
+\ShowFigure[0.82]{03_full_segment_spectra.png}
+{完整紀錄與固定時間片段的正規化單邊振幅頻譜；兩者都先扣除平均值。}
+{fig:spectra}
+
+兩者的低頻成分較顯著，但細部峰值不同。短片段未依 R--R 邊界切割，
+不視為嚴格的單次心搏；頻譜差異需連同觀測長度與所選時間範圍解讀。
+
+% ============================== PAGE 3 ==============================
+\clearpage
+\section{方法設計與實作}
+\subsection{頻譜計算與正規化}
+對樣本數為 $N$ 的訊號 $x[n]$，令 FFT 長度為 $K\ge N$，則
+\begin{equation}
+X_K[k]=\sum_{n=0}^{N-1}x[n]e^{-j2\pi kn/K},
+\qquad f_k=\frac{kF_s}{K}.
+\label{eq:dft}
+\end{equation}
+這是有限長樣本的離散傅立葉轉換（DFT）；FFT 是其有效率的計算方法。
+顯示單邊振幅時，先將 $|X_K[k]|$ 除以原始樣本數 $N$，
+再將具有負頻率共軛配對的正頻率乘以 $2$；
+DC，以及偶數 $K$ 下的 Nyquist 頻點不乘以 $2$\cite{fft}。
+補零只使頻率取樣間距 $F_s/K$ 變小，不增加量測資訊，
+因此正規化的分母仍為 $N$。相關數值檢查見附錄 \ref{app:check}。
+
+\subsection{候選 R 波與心率估計}
+為擷取相鄰峰值的時間間隔，我們先對 ECG 去平均值，
+再除以最大絕對值進行正規化。
+\texttt{findpeaks} 採用高度門檻 $0.6$ 與最小間距 $0.6\s$\cite{findpeaks}。
+若候選峰值的位置為 $\ell_i$，則
+\begin{equation}
+RR_i=\frac{\ell_{i+1}-\ell_i}{F_s},
+\qquad \widehat{HR}=\frac{60}{\operatorname{mean}(RR_i)}.
+\label{eq:hr}
+\end{equation}
+僅將 $0.4\s<RR_i<1.5\s$ 的間隔納入平均。
+表 \ref{tab:hr} 為本次時域估計結果；它提供資料的時間特徵，
+不作為濾波品質指標\cite{run2026}。
+
+\begin{table}[H]\centering
+\caption{候選峰值與 R--R 間隔估計}\label{tab:hr}
+\begin{tabularx}{0.92\linewidth}{@{}Y r@{}}
+\toprule
+項目 & 結果 \\ \midrule
+候選峰值數 & $11$\\
+使用的 R--R 間隔數／排除數 & $10$／$0$\\
+平均 R--R 間隔 & $0.811389\s$\\
+估計心率 & $73.9473\,\mathrm{bpm}$\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{FIR：由零點決定移動平均長度}
+有限脈衝響應（FIR）濾波器以有限長係數處理輸入。
+本實驗採用移動平均，對目前與過去的 $M$ 個樣本取平均：
+\begin{equation}
+y[n]=\frac{1}{M}\sum_{k=0}^{M-1}x[n-k].
+\end{equation}
+由有限等比級數可得到頻率響應
+\begin{equation}
+H_{\mathrm{MA}}(e^{j\omega})
+=\frac{1}{M}e^{-j\omega(M-1)/2}
+\frac{\sin(M\omega/2)}{\sin(\omega/2)},
+\qquad \omega=\frac{2\pi f}{F_s}.
+\label{eq:ma}
+\end{equation}
+其非 DC 零點位於 $f=qF_s/M$（$q=1,\ldots,M-1$）。
+為使第一個正頻率零點對準 $60\Hz$，選擇
+\[
+\boxed{M=\frac{F_s}{60}=\frac{1800}{60}=30.}
+\]
+因此，$60\Hz$ 及 Nyquist 範圍內的相應諧波會落在零點上。
+這提供了參數設計的直接依據；但其他頻率的增益也會改變，
+所以不能把它視為只刪除目標頻率、其餘成分完全不動的系統。
+
+% ============================== PAGE 4 ==============================
+\clearpage
+\section*{方法設計與實作（續）}
+\subsection{IIR：以三個二階系統抑制指定頻率}
+無限脈衝響應（IIR）濾波器使用遞迴結構。
+本實驗對每個目標頻率配置一組零點與極點。
+對 $f_k\in\{60,120,180\}\Hz$，令 $\theta_k=2\pi f_k/F_s$，定義
+\begin{equation}
+H_k(z)=
+\frac{1-2\cos(\theta_k)z^{-1}+z^{-2}}
+     {1-2r\cos(\theta_k)z^{-1}+r^2z^{-2}},
+\qquad r=0.95.
+\label{eq:notch}
+\end{equation}
+零點位於單位圓上的 $e^{\pm j\theta_k}$，使對應頻率的增益為零；
+極點為 $re^{\pm j\theta_k}$，因半徑小於 $1$，此因果系統穩定。
+三個二階系統串接為
+\begin{equation}
+H_{\mathrm{IIR}}(z)=H_{60}(z)H_{120}(z)H_{180}(z).
+\end{equation}
+這個設計分別對應三個目標頻率，
+後續所有輸出、頻率響應與比較皆使用同一組串接係數。
+
+\subsection{實作方式與設計差異}
+FIR 以長度為 $30$ 的等權重係數執行；IIR 則依序處理三個二階系統。
+下列程式片段呈現兩種方法的核心運算。
+\begin{lstlisting}
+bMA = ones(1, M) / M;
+yMA = filter(bMA, 1, x);
+
+yIIR = x;
+for fk = [60 120 180]
+    theta = 2*pi*fk/Fs;
+    b = [1, -2*cos(theta), 1];
+    a = [1, -2*r*cos(theta), r^2];
+    yIIR = filter(b, a, yIIR);
+end
+\end{lstlisting}
+
+\ShowFigure[0.89]{05_magnitude_response.png}
+{兩種濾波器的幅度響應。FIR 的零點週期性出現；三段 IIR 的零點對應三個目標頻率。}
+{fig:magnitude}
+
+圖 \ref{fig:magnitude} 顯示，FIR 對零點以外的頻率也具有較廣的衰減，
+而 IIR 的增益曲線呈現不同的頻率選擇性。
+本實驗未將 IIR 的 DC 增益另外正規化為 $1$；
+由係數計算得到 $H_{\mathrm{IIR}}(1)=1.076204$\cite{run2026}。
+因此，IIR 亦不能被描述成在目標頻率之外完全不改變輸入。
+
+% ============================== PAGE 5 ==============================
+\clearpage
+\section{評估方式與頻域結果}
+\subsection{統一輸入、初始條件與分析區間}
+兩種濾波器都由完整輸入開始，以 \texttt{filter()} 的零初始狀態執行；
+不使用 \texttt{filtfilt()}，亦不先平移輸出\cite{filter,run2026}。
+功率比較統一取 $1.000000$--$8.332778\s$，共 $L=13200$ 個樣本。
+前一秒只是不納入量測，並非在一秒處重新啟動濾波器。
+
+\subsection{頻帶功率降低量的定義}
+對共同區間的資料 $u[n]$，先扣除平均值 $\bar u$，
+再乘上 periodic Hann window $w[n]$，計算單邊功率頻譜密度（PSD）：
+\begin{equation}
+S_u[f_k]
+=c_k\frac{\left|\operatorname{FFT}_K\bigl((u-\bar u)w\bigr)[k]\right|^2}
+{F_s\sum_{n=0}^{L-1}w[n]^2}.
+\label{eq:psd}
+\end{equation}
+其中，有共軛配對的正頻率取 $c_k=2$；
+DC 與偶數 $K$ 下的 Nyquist 頻點取 $1$。
+PSD 表示功率隨頻率的分布，將同一頻帶內的值乘上頻率格點間距後加總，
+即可近似該頻帶的功率。
+對目標頻率 $f_c\in\{60,120,180\}\Hz$，
+評估 $f_c\pm1\Hz$ 內的功率 $P_c$，並定義
+\begin{equation}
+A_c=10\log_{10}\frac{P_{\mathrm{raw},c}}{P_{\mathrm{filtered},c}}
+\quad(\mathrm{dB}).
+\label{eq:attenuation}
+\end{equation}
+正值代表該頻帶的功率降低，數值越大表示在此指標下的降低量越多。
+
+\begin{table}[H]\centering
+\caption{相同分析條件下的指定頻帶功率降低量\cite{run2026}}\label{tab:bands}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+評估頻帶（$\mathrm{Hz}$） & FIR（$\mathrm{dB}$） & 三段 IIR（$\mathrm{dB}$）\\ \midrule
+$60\pm1$  & 46.2567 & 33.1245\\
+$120\pm1$ & 52.5738 & 33.6474\\
+$180\pm1$ & 55.8174 & 33.2339\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\ShowFigure[0.86]{08_psd_comparison.png}
+{共同區間、相同 Hann window 與縮放方式下的 PSD 比較；縱軸採用對數尺度。}
+{fig:psd}
+
+FIR 在這三個頻帶的功率降低量均較大，但圖 \ref{fig:magnitude} 同時顯示它對其他頻率亦有較廣的衰減。
+因此，這項結果\textbf{不能單獨推出 FIR 整體較好}。
+頻帶內可能同時包含欲保留成分，故 $A_c$ 也不等於雜訊單獨的衰減量或訊噪比改善量。
+
+% ============================== PAGE 6 ==============================
+\clearpage
+\section{時域結果與延遲分析}
+\subsection{局部波形的變化}
+頻域結果能說明哪些成分被抑制；為了解處理後的訊號形態，
+我們進一步比較 $3$--$4\s$ 的局部波形。
+圖 \ref{fig:local} 的三條曲線使用相同時間軸，沒有額外做時間對齊。
+
+\ShowFigure[0.87]{04_local_comparison.png}
+{原始 ECG、FIR 與三段 IIR 在相同時間軸上的局部輸出。}
+{fig:local}
+
+可以觀察到，尖峰附近的幅度與時間位置存在差異，
+因此平滑程度不是唯一需要考慮的輸出特徵。
+這張圖提供局部變化的質性證據，不代表已完成所有心搏的形態保真度評估。
+
+\subsection{固定延遲與頻率相關延遲}
+頻率響應同時包含幅度與相位。
+為檢查不同頻率成分的時間行為，考慮群延遲
+\begin{equation}
+\tau_g(\omega)=-\frac{\mathrm{d}}{\mathrm{d}\omega}\arg H(e^{j\omega}).
+\label{eq:gd}
+\end{equation}
+$\omega$ 以 rad/sample 表示時，$\tau_g$ 的單位是取樣點；
+除以 $F_s$ 可換算成秒\cite{grpdelay}。
+對 30 點對稱 FIR，頻率響應非零處的群延遲為
+\[
+\tau_{\mathrm{MA}}=\frac{30-1}{2}=14.5\ \text{個取樣點}
+=8.055556\ms.
+\]
+
+\ShowFigure[0.87]{07_group_delay.png}
+{FIR 的固定群延遲與三段 IIR 的頻率相關群延遲；頻率響應零點處略去。}
+{fig:delay}
+
+圖 \ref{fig:delay} 顯示，FIR 的延遲固定，這組 IIR 的延遲則隨頻率改變。
+本實作由係數對頻率的解析導數計算群延遲，避免直接對 wrapped phase 的跳躍作有限差分。
+波形差異同時受到幅度與相位影響，不能只將圖 \ref{fig:local} 的所有變化歸因於其中一項。
+
+% ============================== PAGE 7 ==============================
+\clearpage
+\subsection{相對原訊號的變動量}
+在相同評估區間，定義 RMS 比值與相對變動量：
+\begin{equation}
+R_{\mathrm{RMS}}=\frac{\|y\|_2}{\|x\|_2},
+\qquad D_{\mathrm{raw}}=\frac{\|y-x\|_2}{\|x\|_2}.
+\label{eq:change}
+\end{equation}
+此處不另行扣除平均值或補償延遲，與 PSD 的前處理不同。
+兩者分別描述整體幅度比例及輸出與原資料之間的差異。
+
+\begin{table}[H]\centering
+\caption{相對原始訊號的變動量與 DC 增益\cite{run2026}}\label{tab:change}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+方法 & $R_{\mathrm{RMS}}$ & $D_{\mathrm{raw}}$ & DC 增益\\ \midrule
+原始訊號 & 1 & 0 & 1\\
+FIR 移動平均 & 0.902845 & 0.626026 & 1\\
+三段 IIR & 1.05145 & 0.232952 & 1.0762\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+IIR 在 $D_{\mathrm{raw}}$ 的定義下較接近原始訊號。
+但原始訊號本身可能含有干擾，且這個指標也包含延遲造成的差異，
+所以「較接近原始資料」不等同「去雜訊品質較好」。
+IIR 的 RMS 比值大於 $1$，亦需連同其非單位增益一起理解。
+
+\section{討論與結論}
+\subsection{兩種設計的取捨}
+本專案完成了\textbf{由頻譜分析、參數推導到實作與量化比較}的處理流程。
+FIR 以 $M=30$ 使 $60\Hz$ 及其相應諧波落在零點上，
+在三個指定頻帶取得較大的功率降低量，
+但同時伴隨較廣的頻率衰減與約 $8.06\ms$ 的固定延遲。
+三段 IIR 以個別零極點對應 $60/120/180\Hz$，
+也能抑制指定頻率，但增益不完全為 $1$，群延遲亦隨頻率變化。
+
+因此，\textbf{有效的濾波比較必須同時看抑制效果與訊號改變}。
+本次結果提供了可檢查的頻帶功率、增益、群延遲及波形證據，
+而不是僅以曲線變平滑作為判斷。
+
+\subsection{適用範圍與後續方向}
+目前結論限於本筆資料、固定係數與既定評估區間。
+候選 R 波採 $0.6\s$ 的最小間距，不能直接推廣至約 $100\,\mathrm{bpm}$ 以上的資料；
+單次峰值估計亦不構成偵測準確率。
+缺少乾淨參考與人工標註，限制了對波形保留與偵測性能的量化判斷。
+後續可在具備參考資料的多筆紀錄上，檢查不同參數、干擾情況及峰值偵測結果。
+
+\subsection{實驗紀錄與重現條件}
+實驗於 2026-10-03 09:51:52 記錄，環境為 MATLAB
+\texttt{26.1.0.3346908 (R2026a) Update 5}。
+重現時需保持相同的 ECG 資料、取樣率、濾波係數、峰值參數與評估區間，
+並以 \texttt{run\_demo.m}、CSV 結果與執行紀錄核對。
+本文圖表與數值對應同一次執行，不另行混用不同參數的結果\cite{run2026}。
+
+{\footnotesize\noindent 工具使用說明：數值分析與繪圖使用 MATLAB；程式整理與文件撰寫使用 AI 輔助。}
+
+% ============================== PAGE 8 ==============================
+\clearpage
+\appendix
+\section{數值檢查與補充圖形}\label{app:check}
+\subsection{FFT 一致性與補零}
+以直接 DFT 與 FFT 處理相同有限長資料，
+本次相對最大差異為 $2.67306\times10^{-14}$\cite{run2026}。
+圖 \ref{fig:fft} 固定 $240$ 個樣本，比較 $240$ 點與 $4096$ 點 FFT。
+補零使曲線的頻率取樣更密，但未增加觀測長度或新的量測資訊。
+
+\ShowFigure[0.84]{01_fft_padding.png}
+{相同的 240 個樣本在兩種 FFT 長度下的結果；較密的頻點不等於新增訊號資訊。}
+{fig:fft}
+
+\subsection{相位響應與檢查範圍}
+圖 \ref{fig:phase} 呈現 wrapped phase。頻率響應為零時相位不定義，
+因此這些點略去；圖中的跳躍不能直接視為群延遲，
+需配合式 \eqref{eq:gd} 與圖 \ref{fig:delay} 閱讀。
+
+\ShowFigure[0.84]{06_phase_response.png}
+{兩種濾波器的 wrapped phase；群延遲另由解析導數計算。}
+{fig:phase}
+
+執行紀錄列出十項數值檢查，涵蓋 DFT／FFT、奇偶長度振幅縮放、
+FIR 與卷積、IIR 串接與展開係數、固定群延遲、\texttt{freqz} 響應、
+PSD 的 Parseval 一致性、極點半徑及輸出有限性。
+逐項數值與容許誤差由 \texttt{results/validation.csv} 記錄；
+這些檢查驗證運算的一致性，不等同跨資料集或醫療性能驗證\cite{run2026}。
+
+\begingroup
+\small
+\setlength{\parskip}{0pt}
+\begin{thebibliography}{9}
+\setlength{\itemsep}{1pt}
+\bibitem{run2026}
+陳奕安。\emph{ECG 訊號分析與 FIR／IIR 濾波器比較}，MATLAB 執行紀錄，2026-10-03。
+\bibitem{fft}
+MathWorks. \href{https://www.mathworks.com/help/matlab/ref/fft.html}{\texttt{fft}: Fast Fourier transform}.
+\bibitem{findpeaks}
+MathWorks. \href{https://www.mathworks.com/help/signal/ref/findpeaks.html}{\texttt{findpeaks}: Find local maxima}.
+\bibitem{filter}
+MathWorks. \href{https://www.mathworks.com/help/matlab/ref/filter.html}{\texttt{filter}: 1-D digital filter}.
+\bibitem{grpdelay}
+MathWorks. \href{https://www.mathworks.com/help/signal/ref/grpdelay.html}{\texttt{grpdelay}: Group delay}.
+\end{thebibliography}
+\endgroup
+\end{document}

@@ -1,0 +1,92 @@
+[
+  {
+    "path": "package_github.m",
+    "sha256": "4d2d0d440701fce961ff6d95721faa599a298d399d57ac9853eec49ab67977a0",
+    "lines": 47
+  },
+  {
+    "path": "run_demo.m",
+    "sha256": "d7a277c0cf2d54a6c8e5c8cef310e06d907614c1d2c9ef0e245fc25bddb4f5a0",
+    "lines": 150
+  },
+  {
+    "path": "run_tests.m",
+    "sha256": "da3136e3060799112cc553df5939e036c441bc13e79b23903e766b06090f8aa2",
+    "lines": 40
+  },
+  {
+    "path": "src/amplitude_spectrum.m",
+    "sha256": "23e26b519470aecddf2fd8e6e294ed7dcaae09333e5396bb96e7825b412d9aa5",
+    "lines": 20
+  },
+  {
+    "path": "src/analyze_ecg.m",
+    "sha256": "f335a9cc82e0b6c04771e188e8291ac39f90d57e1fc18b9babc8c08e150c40a4",
+    "lines": 96
+  },
+  {
+    "path": "src/cascade_response.m",
+    "sha256": "bbc832da225d5fb08e86e15869edd0158b0ac485f8c48713d355dab2d092cb47",
+    "lines": 13
+  },
+  {
+    "path": "src/compare_report_values.m",
+    "sha256": "de0a61c31af4f0b4e2c997abe6f9570f3d2eaf24dd661449be201ba39f611196",
+    "lines": 29
+  },
+  {
+    "path": "src/design_ecg_filters.m",
+    "sha256": "f87f6a6fbf1bc0bde58309c0f24fe380cead68826aa8430973a05ce6e8ff9a4c",
+    "lines": 37
+  },
+  {
+    "path": "src/detect_r_peaks.m",
+    "sha256": "49185a448095d8f2acc89c0ac0586af93947c310aea1ff65c4dbf429c8db7106",
+    "lines": 36
+  },
+  {
+    "path": "src/ecg_config.m",
+    "sha256": "e21cd1bb3645218a365a06451e845779d76d4bc45532042a934958d7009d9abf",
+    "lines": 32
+  },
+  {
+    "path": "src/filter_ecg.m",
+    "sha256": "ee27cf034c4d06bd7edaf1459062b5be63dfe9b32e0479f96e7c55cd6943d370",
+    "lines": 13
+  },
+  {
+    "path": "src/frequency_response_delay.m",
+    "sha256": "877b8ebcc3c926d48244179e0e4dd26239b46e9b8cc21ca576393df5bc7554ab",
+    "lines": 20
+  },
+  {
+    "path": "src/load_ecg_data.m",
+    "sha256": "f1ea5f436826d12d2843ce2db6886af16f6ddc633b4d7e3c294438cbcf68c7cc",
+    "lines": 41
+  },
+  {
+    "path": "src/plot_ecg_results.m",
+    "sha256": "fd1acd93582e48d23d0bb28b43426664ea6b9986d9a9564403e9db42ee3874f0",
+    "lines": 107
+  },
+  {
+    "path": "src/validate_numerics.m",
+    "sha256": "f31d0c1f61f13636e2bc01ec1e5b35914abe7d04a7e524bd56c70411a4e0c867",
+    "lines": 43
+  },
+  {
+    "path": "src/windowed_psd.m",
+    "sha256": "3f8b90b98214a5bc70aebf00618b98de659ad03a86051184c0829550417d9baf",
+    "lines": 24
+  },
+  {
+    "path": "src/write_ecg_results.m",
+    "sha256": "8896656cf37545f0b6d8091ace1933fb8087f0f90ae0ca25c74edb02ed3e0272",
+    "lines": 55
+  },
+  {
+    "path": "tests/test_ecg_functions.m",
+    "sha256": "c0251fead18dd6eaa83164dd90d33eca48031f2ac3862ab8766c5eb17a685651",
+    "lines": 58
+  }
+]

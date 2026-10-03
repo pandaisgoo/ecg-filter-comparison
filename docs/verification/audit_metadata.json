@@ -1,0 +1,15 @@
+{
+  "engine": "Python NumPy/SciPy equivalent equations, NOT MATLAB .m execution",
+  "numpy": "2.3.5",
+  "scipy": "1.17.0",
+  "input_file": "ECG.mat",
+  "input_sha256": "b1ecca907d7873b1a6757813f4df607cf4e5905c28996bd0c0834cc945e8918e",
+  "input_min": -53.281304506239564,
+  "input_max": 204.09898008942207,
+  "input_mean": -0.0030496116980645942,
+  "reference_comparisons_passed": 18,
+  "numerical_checks_passed": 10,
+  "matlab_runtime_available": false,
+  "plot_export_executed_in_matlab": false,
+  "matlab_parser_used": false
+}
