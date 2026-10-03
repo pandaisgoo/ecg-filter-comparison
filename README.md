@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ECG 訊號分析與 FIR／IIR 濾波器比較
 
 使用 MATLAB 進行 ECG 頻譜分析、數位濾波器設計與量化比較。
@@ -69,3 +70,7 @@ ECG 資料、取樣率、係數、峰值參數與分析區間，並保留 CSV �
 數值與圖形對應《ECG 訊號分析與 FIR／IIR 濾波器比較》2026-10-03 MATLAB 執行紀錄；
 方法與函式參考列於報告末尾。程式整理與文件撰寫使用 AI 輔助。
 原始資料與衍生圖表的公開權利需另行確認，本文不替來源材料授予新的使用授權。
+=======
+# ecg-filter-comparison
+some results for analysis of ECG 
+>>>>>>> origin/main
